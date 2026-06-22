@@ -1641,13 +1641,19 @@ function closePrivacy(){
 
 function exportJson(){
     const data={records:S.records,entries:S.entries,cfg:S.cfg,active:S.activeEntry};
-    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'});
+    const jsonStr=JSON.stringify(data,null,2);
+    const blob=new Blob([jsonStr],{type:'application/json;charset=utf-8'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url;a.download=`PunchLog_backup_${new Date().toISOString().slice(0,10)}.json`;
     document.body.appendChild(a);a.click();
     document.body.removeChild(a);URL.revokeObjectURL(url);
-    toast('JSON 已导出');
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(jsonStr).then(()=>toast('JSON 已下载并复制')).catch(()=>toast('JSON 已导出'));
+    } else {
+        fallbackCopy(jsonStr);
+        toast('JSON 下载且复制');
+    }
 }
 
 function importJson(input){
