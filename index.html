@@ -1578,7 +1578,7 @@ function exportTxt(){
         a.href=url;a.download=`工时报告_${S.y}年${S.m+1}月.txt`;
         document.body.appendChild(a);a.click();
         document.body.removeChild(a);URL.revokeObjectURL(url);
-        toast('已下载并复制');
+        toast('下载且复制');
         if(navigator.clipboard && navigator.clipboard.writeText){
         navigator.clipboard.writeText(content).catch(()=>{});
     } else {
@@ -1649,7 +1649,7 @@ function exportJson(){
     document.body.appendChild(a);a.click();
     document.body.removeChild(a);URL.revokeObjectURL(url);
     if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(jsonStr).then(()=>toast('JSON 已下载并复制')).catch(()=>toast('JSON 已导出'));
+        navigator.clipboard.writeText(jsonStr).then(()=>toast('JSON 下载且复制')).catch(()=>toast('JSON 已导出'));
     } else {
         fallbackCopy(jsonStr);
         toast('JSON 下载且复制');
