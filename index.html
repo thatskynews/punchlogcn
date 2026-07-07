@@ -479,14 +479,22 @@
             padding:0;z-index:110;
             transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
             will-change:transform;
+            max-height:85vh;
+            display:flex;
+            flex-direction:column;
         }
         .link-sheet.open{transform:translateY(0);}
         .link-sheet-head{
             display:flex;justify-content:space-between;align-items:center;
             padding:20px 20px 12px;border-bottom:1px solid var(--border);
+            flex-shrink:0;
         }
         .link-sheet-title{font-size:15px;font-weight:700;color:var(--text-2);}
-        .link-items{padding:8px 0 36px;}
+        .link-items{
+            padding:8px 0 36px;
+            flex:1;
+            overflow-y:auto;
+        }
         .link-item{
             display:flex;align-items:center;gap:14px;
             padding:16px 20px;cursor:pointer;transition:background 0.15s;
@@ -757,6 +765,13 @@
             </div>
             <span class="extra-unit">元</span>
         </div>
+        <div class="extra-row">
+            <span class="extra-lbl">时薪</span>
+            <div class="extra-wrap">
+                <input class="extra-input" type="text" inputmode="numeric" id="extra-rate" placeholder="独立{0}时薪" value="默认设置值" oninput="onRateInput()">
+            </div>
+            <span class="extra-unit">元/时</span>
+        </div>
         <textarea class="note-ta" id="note-ta" rows="2" placeholder="添加备注..." style="margin-top:14px;"></textarea>
     </div>
     <div class="sheet-footer">
@@ -791,8 +806,13 @@
         </div>
         <div class="extra-row" style="margin-bottom:12px;">
             <span class="extra-lbl">补贴</span>
-            <div class="extra-wrap"><input class="extra-input" type="number" id="bh-extra" step="10" placeholder="" value="0"></div>
+            <div class="extra-wrap"><input class="extra-input" type="number" id="bh-extra" step="10" placeholder="0" value="0"></div>
             <span class="extra-unit">元</span>
+        </div>
+        <div class="extra-row" style="margin-bottom:12px;">
+            <span class="extra-lbl">时薪</span>
+            <div class="extra-wrap"><input class="extra-input" type="text" inputmode="numeric" id="bh-rate" placeholder="独立{0}时薪" value="默认设置值"></div>
+            <span class="extra-unit">元/时</span>
         </div>
         <div class="type-tabs" id="batch-type-tabs" style="margin-bottom:14px;">
             <div class="ttab sel-normal" data-t="normal" onclick="selBatchType('normal',this)"><span class="ti">普通</span>正常上班</div>
@@ -1201,10 +1221,12 @@ function openPanel(y,m,d){
         else{hours=S.typeHours[type]||S.lastHours;}
     }
     setH(hours);selTypeByName(type);selShiftByName(shift);
-    document.getElementById('note-ta').value=note;
-    document.getElementById('extra-pay').value=extra!==null&&extra!==undefined?extra:0;
-    document.getElementById('overlay').classList.add('show');
-    document.getElementById('panel').classList.add('open');
+const savedRate=rec&&typeof rec==='object'&&rec.rate?rec.rate:'默认设置值';
+document.getElementById('extra-rate').value=savedRate;
+document.getElementById('note-ta').value=note;
+document.getElementById('extra-pay').value=extra!==null&&extra!==undefined?extra:0;
+document.getElementById('overlay').classList.add('show');
+document.getElementById('panel').classList.add('open');
 }
 function openTodayPanel(){const t=new Date();openPanel(t.getFullYear(),t.getMonth(),t.getDate());}
 function closePanel(){
@@ -1278,10 +1300,17 @@ function onHInput(){
         localStorage.setItem('wh3_type_'+S.editType,v);
     }
 }
+function onRateInput(){
+    const v=parseFloat(document.getElementById('h-val').value)||0;
+    updateIncPrev(v);
+}
 function updateIncPrev(h){
     const extraVal=document.getElementById('extra-pay').value;
     const extra=extraVal===''?0:parseFloat(extraVal)||0;
-    const inc=(h*S.cfg.rate)+extra;
+    const rateEl=document.getElementById('extra-rate');
+    const rawRate=rateEl?rateEl.value.trim():'';
+const rate=/^\d+(\.\d+)?$/.test(rawRate)?parseFloat(rawRate):S.cfg.rate;
+    const inc=(h*rate)+extra;
     document.getElementById('inc-prev').innerHTML=`预计收入 <b>¥${inc.toFixed(0)}</b>${extra>0?' (含补贴)':''}`;
 }
 
@@ -1293,15 +1322,19 @@ function saveRecord(){
     }
     const note=document.getElementById('note-ta').value.trim();
     const extraVal=document.getElementById('extra-pay').value;
-    const extra=extraVal===''?null:parseFloat(extraVal)||0;
+    const extra=extraVal===''?0:parseFloat(extraVal)||0;
     S.lastHours=hours;
     localStorage.setItem('wh3_lasthours',hours);
     if(S.editType!=='leave'){
         S.typeHours[S.editType]=hours;
         localStorage.setItem('wh3_type_'+S.editType,hours);
     }
-    if(extra!==null){S.lastExtra=extra;localStorage.setItem('wh3_lastextra',extra);}
-    S.records[recKey(S.editKey)]={hours,rate:S.cfg.rate,type:S.editType,shift:S.editShift,note,extra:extra||0};
+    S.lastExtra=extra;
+    localStorage.setItem('wh3_lastextra',extra);
+const rateEl=document.getElementById('extra-rate');
+const rawRate=rateEl?rateEl.value.trim():'';
+const rate=/^\d+(\.\d+)?$/.test(rawRate)?parseFloat(rawRate):S.cfg.rate;
+    S.records[recKey(S.editKey)]={hours,rate,type:S.editType,shift:S.editShift,note,extra:extra||0};
     persist();render();closePanel();
     toast('记录已保存');
 }
@@ -1460,10 +1493,13 @@ function saveBatch(){
     if(S.batchSel.size===0){toast('请先选择日期');return;}
     const hours=parseFloat(document.getElementById('bh-val').value)||0;
     const shift=S.batchShift || 'day';
+    const rateEl=document.getElementById('bh-rate');
+const rawRate=rateEl?rateEl.value.trim():'';
+const bRate=/^\d+(\.\d+)?$/.test(rawRate)?parseFloat(rawRate):S.cfg.rate;
     S.batchSel.forEach(d=>{
         const key=dk(S.y,S.m,d);
         const bExtra=parseFloat(document.getElementById('bh-extra').value)||0;
-        S.records[recKey(key)]={hours,rate:S.cfg.rate,type:S.batchType,shift,note:S.batchNotes[d]||'',extra:bExtra};
+        S.records[recKey(key)]={hours,rate:bRate,type:S.batchType,shift,note:S.batchNotes[d]||'',extra:bExtra};
     });
     persist();
     const savedCnt=S.batchSel.size;
@@ -1800,7 +1836,6 @@ function initSwipe(){
     },{passive:true});
 }
 initSwipe();
-
 </script>
 </body>
 </html>
