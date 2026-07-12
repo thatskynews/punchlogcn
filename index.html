@@ -1606,6 +1606,7 @@ function exportTxt(){
     lines.push(`PunchLog — ${S.y}年${S.m+1}月 【${ae.name}】`);
     lines.push('='.repeat(30));
     let totalH=0,totalInc=0;
+    const customRates=[];
     if(recs.length===0){lines.push('本月暂无记录');}
     else{
         recs.forEach(([k,r])=>{
@@ -1617,17 +1618,20 @@ function exportTxt(){
             const shift=typeof r==='object'&&r.shift==='night'?'(夜班)':'';
             const note=typeof r==='object'&&r.note?` — ${r.note}`:'';
             const extra=typeof r==='object'&&r.extra?r.extra:0;
-            const rate=typeof r==='object'&&r.rate?r.rate:S.cfg.rate;
+            const hasCustomRate=typeof r==='object'&&r.rate;
+            const rate=hasCustomRate?r.rate:S.cfg.rate;
             const inc=h*rate+extra;
             const dow=WD[new Date(S.y,S.m,parseInt(d)).getDay()];
             lines.push(`${S.m+1}/${d} ${dow} ${tl}${shift} ${h} h  ¥${inc.toFixed(0)}${note}`);
             totalH+=h;totalInc+=inc;
+            if(hasCustomRate&&rate!==S.cfg.rate) customRates.push(`${S.m+1}/${d}  ${rate}元/时`);
         });
     }
     lines.push('='.repeat(30));
     lines.push(`合计：${totalH.toFixed(1)} h  /  ${recs.length} 天`);
     lines.push(`总收入：¥${totalInc.toFixed(0)}`);
-    lines.push(`时薪：${S.cfg.rate} 元/时`);
+    lines.push(`默认时薪：${S.cfg.rate}元/时`);
+    if(customRates.length) lines.push(`定义时薪：${customRates.join('丨')}`);
     lines.push(`导出时间：${new Date().toLocaleString('zh-CN')}`);
     const content=lines.join('\n');
     try{
