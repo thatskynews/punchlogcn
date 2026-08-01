@@ -734,7 +734,7 @@
         <div class="type-tabs" id="type-tabs">
             <div class="ttab sel-normal" data-t="normal" onclick="selType('normal',this)"><span class="ti">普通</span>正常上班</div>
             <div class="ttab" data-t="overtime" onclick="selType('overtime',this)"><span class="ti">加班</span>延时工作</div>
-            <div class="ttab" data-t="leave" onclick="selType('leave',this)"><span class="ti">请假</span>定义工时</div>
+            <div class="ttab" data-t="leave" onclick="selType('leave',this)"><span class="ti">休息</span>定义工时</div>
         </div>
         <div class="fld-lbl">班次</div>
         <div class="shift-tabs" id="shift-tabs">
@@ -817,7 +817,7 @@
         <div class="type-tabs" id="batch-type-tabs" style="margin-bottom:14px;">
             <div class="ttab sel-normal" data-t="normal" onclick="selBatchType('normal',this)"><span class="ti">普通</span>正常上班</div>
             <div class="ttab" data-t="overtime" onclick="selBatchType('overtime',this)"><span class="ti">加班</span>延时工作</div>
-            <div class="ttab" data-t="leave" onclick="selBatchType('leave',this)"><span class="ti">请假</span>定义工时</div>
+            <div class="ttab" data-t="leave" onclick="selBatchType('leave',this)"><span class="ti">休息</span>定义工时</div>
         </div>
     </div>
     <div class="sheet-footer">
@@ -1614,7 +1614,7 @@ function exportTxt(){
             const d=dk_.split('-')[2];
             const h=getH(r);
             const t=typeof r==='object'?r.type:'normal';
-            const tl=t==='overtime'?'[加班]':t==='leave'?'[请假]':'[正常]';
+            const tl=t==='overtime'?'[加班]':t==='leave'?'[休息]':'[正常]';
             const shift=typeof r==='object'&&r.shift==='night'?'(夜班)':'';
             const note=typeof r==='object'&&r.note?` — ${r.note}`:'';
             const extra=typeof r==='object'&&r.extra?r.extra:0;
