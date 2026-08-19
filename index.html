@@ -420,6 +420,10 @@
         .bday.bempty{opacity:0;pointer-events:none;}
         .bday .bdn{font-size:11px;}
         .bday .bdot{width:4px;height:4px;border-radius:50%;background:var(--primary);margin-top:2px;}
+        .bday .bdot.bdot-primary{background:var(--primary);}
+        .bday .bdot.bdot-warning{background:var(--warning);}
+        .bday .bdot.bdot-danger{background:var(--danger);}
+        .bday .bdot.bdot-purple{background:var(--purple);}
 
         .bday.bsel{background:var(--primary-dim);border-color:rgba(59,130,246,0.45);color:var(--primary);}
         .bday.bsel.b-overtime{background:var(--warning-dim);border-color:rgba(245,158,11,0.55);color:var(--warning);}
@@ -655,7 +659,7 @@
             </div>
             <div class="link-info">
                 <div class="link-name">检查版本更新</div>
-                <div class="link-desc">当前版本 <span id="local-version-text">1271.49(1678)</span></div>
+                <div class="link-desc">当前版本 <span id="local-version-text">1280.27(1847)</span></div>
             </div>
             <span class="link-arrow">›</span>
         </button>
@@ -869,7 +873,7 @@
             </div>
         </div>
         <div class="si">
-            <div><div class="si-lbl">月目标工时</div><div class="si-sub">显示进度</div></div>
+            <div><div class="si-lbl">月目标工时</div><div class="si-sub">显示工时进度</div></div>
             <div style="display:flex;align-items:center;gap:6px;">
                 <input class="si-inp" type="number" id="set-target" value="280" min="1" step="8" oninput="saveSettings()">
                 <span style="font-size:13px;color:var(--text-2)">小时</span>
@@ -891,6 +895,10 @@
         <div class="si">
             <div><div class="si-lbl">本月备注记录</div><div class="si-sub">快速查看本月备注记录</div></div>
             <button class="si-btn neutral" onclick="showNotesDays()">查看</button>
+        </div>
+        <div class="si">
+            <div><div class="si-lbl">操作日志</div><div class="si-sub">查看近50条的操作记录</div></div>
+            <button class="si-btn neutral" onclick="showOpLog()">查看</button>
         </div>
         <div class="si" style="border-bottom: none;">
             <div><div class="si-lbl" style="color:var(--danger)">清空所有数据</div><div class="si-sub">此操作不可撤销</div></div>
@@ -962,16 +970,23 @@ let S={
     activeEntry:'default',
     entries:[{id:'default',name:'记工时',note:'默认记工时条目'}],
     records:{},
+    opLog:[],
     cfg:{rate:20,target:280, bgFlow:false }
 };
 
 // 版本检查配置
-const CURRENT_VER = '1271.49(1678)';
+const CURRENT_VER = '1280.27(1847)';
 const VERSION_FILE_URL = 'https://punchlogcn.pages.dev/version.txt';
 const APK_DOWNLOAD_URL = 'https://punchlogcn.pages.dev/PunchLog.apk';
 
 // 更新日志
 const UPDATE_HISTORY = `
+◆【1280.27 / 1847】2026/8/20<br>
+- 设置新增引入「操作日志」，记录最近 50 条操作记录<br>
+- 批量编辑面板中的记录状态点调整为按类型覆色以便于区分<br>
+- 「连续打卡天数」改为从今天向前逐日推算，不再受月末或所选月份限制及大于0工时<br>
+- 底部统计卡片新增「今年累计收入」展示<br>
+- 其它优化与调整<br><br>
 ◆【1271.49 / 1678】2026/7/29<br>
 - 记录仪表标签请假调整为休息文本<br>
 - 引入「检查版本更新」功能，以获取最新版本<br>
@@ -998,8 +1013,7 @@ const UPDATE_HISTORY = `
 - 月度统计增加「总工时变化趋势」概览小窗<br>
 - 优化「恢复备份」功能的解析逻辑，提高导入成功率<br>
 - 改进顶部状态栏信息显示，日期与星期更直观<br>
-- 批量编辑页面增加日期备注快速预览功能<br>
-- 修复部分手机夜间模式下弹窗背景模糊度异常的问题<br><br>
+- 批量编辑页面增加日期备注快速预览功能<br><br>
 ◆【1265.88 / 1245】2026/5/15<br>
 - 优化日历日期选择触控反馈，减少误触<br>
 - 底部统计卡片新增数据快照展示，便于快速回顾过往工作节奏<br>
@@ -1047,6 +1061,8 @@ function load(){
         if(tn!==null) S.typeHours.normal=parseFloat(tn);
         const to=localStorage.getItem('wh3_type_overtime');
         if(to!==null) S.typeHours.overtime=parseFloat(to);
+        const ol=localStorage.getItem('wh3_oplog');
+        if(ol) S.opLog=JSON.parse(ol);
         if(S.cfg.bgFlow) document.body.classList.add('bg-flow');
         updateToggleUI();
     }catch(e){}
@@ -1073,6 +1089,22 @@ function dk(y,m,d){return `${y}-${m+1}-${d}`;}
 function todayDk(){const t=new Date();return dk(t.getFullYear(),t.getMonth(),t.getDate());}
 function recKey(dateKey){return S.activeEntry+'|'+dateKey;}
 function getH(r){return r?(typeof r==='number'?r:(r.hours??0)):0;}
+const OPLOG_TYPE_NAMES={normal:'普通',overtime:'加班',leave:'休息'};
+function addOpLog(dateKey,action,detail,type){
+    const now=new Date();
+    const pad=n=>String(n).padStart(2,'0');
+    const time=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const parts=dateKey.split('-');
+    const date=`${parts[1]}月${parts[2]}日`;
+    S.opLog.unshift({time,date,action,detail,type:OPLOG_TYPE_NAMES[type]||type||''});
+    if(S.opLog.length>50) S.opLog.length=50;
+    localStorage.setItem('wh3_oplog',JSON.stringify(S.opLog));
+}
+function showOpLog(){
+    if(!S.opLog||S.opLog.length===0){toast('暂无操作日志');return;}
+    const lines=S.opLog.map(e=>`${e.time}　${e.date}　${e.action} ${e.detail}${e.type?`（${e.type}）`:''}`).join('<br>');
+    showDialog('操作日志',lines,'关闭','dbtn-ok',()=>{},'');
+}
 
 function toast(msg){
     const el=document.getElementById('toast');
@@ -1254,31 +1286,43 @@ function updateQuickBtn(){
     else{btn.classList.remove('done');txt.textContent='记录今天工时';}
 }
 
+function formatChipIncome(v){
+    if(v>=10000) return (v/10000).toFixed(2)+'万';
+    return v.toFixed(0);
+}
 function updateChips(){
     const chips=[];
-    let yTot=0,yDays=0;
+    let yTot=0,yDays=0,yInc=0;
     const yPre=`${S.activeEntry}|${S.y}-`;
     for(const k in S.records){
-        if(k.startsWith(yPre)){yTot+=getH(S.records[k]);yDays++;}
+        if(k.startsWith(yPre)){
+            const r=S.records[k];
+            const h=getH(r);
+            yTot+=h;yDays++;
+            const rate=typeof r==='object'&&r.rate?r.rate:S.cfg.rate;
+            const extra=typeof r==='object'&&r.extra?r.extra:0;
+            yInc+=(h*rate+extra);
+        }
     }
+    chips.push(`<div class="chip"><strong>¥${formatChipIncome(yInc)}</strong>${S.y}年累计收入</div>`);
     chips.push(`<div class="chip"><strong>${yTot.toFixed(0)} h</strong>${S.y}年累计</div>`);
     chips.push(`<div class="chip"><strong>${yDays}天</strong>今年打卡</div>`);
 
-    // === 新增：本月连续打卡天数 ===
-    const dim = new Date(S.y, S.m + 1, 0).getDate();
     let consecutiveDays = 0;
-    for (let d = dim; d >= 1; d--) {
-        const key = dk(S.y, S.m, d);
+    let cursor = new Date();
+    while (true) {
+        const key = dk(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
         const rk = recKey(key);
         const rec = S.records[rk];
         if (rec && getH(rec) > 0) {
             consecutiveDays++;
+            cursor.setDate(cursor.getDate() - 1);
         } else {
             break;
         }
     }
     if (consecutiveDays > 0) {
-        chips.push(`<div class="chip"><strong>${consecutiveDays}天</strong>本月连续打卡</div>`);
+        chips.push(`<div class="chip"><strong>${consecutiveDays}天</strong>连续打卡</div>`);
     }
 
     for(let i=1;i<=3;i++){
@@ -1421,13 +1465,20 @@ function saveRecord(){
     const rateEl=document.getElementById('extra-rate');
     const rawRate=rateEl?rateEl.value.trim():'';
     const rate=/^\d+(\.\d+)?$/.test(rawRate)?parseFloat(rawRate):S.cfg.rate;
+    const prevRec=S.records[recKey(S.editKey)];
+    const prevH=prevRec?getH(prevRec):null;
     S.records[recKey(S.editKey)]={hours,rate,type:S.editType,shift:S.editShift,note,extra:extra||0};
+    addOpLog(S.editKey,prevRec?'修改':'新增',prevRec?`${prevH}h → ${hours}h`:`${hours}h`,S.editType);
     persist();render();closePanel();
     toast('记录已保存');
 }
 function askDelete(){
     showDialog('删除记录','确定要删除这天的工时记录吗？','删除','dbtn-danger',()=>{
+        const prevRec=S.records[recKey(S.editKey)];
+        const prevH=prevRec?getH(prevRec):0;
+        const prevType=prevRec&&typeof prevRec==='object'?prevRec.type:'normal';
         delete S.records[recKey(S.editKey)];
+        addOpLog(S.editKey,'删除',`${prevH}h`,prevType);
         persist();render();closePanel();toast('已删除');
     });
 }
@@ -1490,7 +1541,8 @@ function renderBatchGrid(){
     for(let d=1;d<=dim;d++){
         const key=dk(S.y,S.m,d);
         const rk=recKey(key);
-        const hasr=!!S.records[rk];
+        const rec=S.records[rk];
+        const hasr=!!rec;
         const sel=S.batchSel.has(d);
         let cls='bday';
         if(sel) {
@@ -1500,7 +1552,13 @@ function renderBatchGrid(){
             if(S.batchShift === 'night') { cls += ' s-night'; }
         }
         if(hasr && !sel) cls += ' bhas';
-        const dot=hasr?`<div class="bdot"></div>`:'';
+        let dot='';
+        if(hasr){
+            const t=typeof rec==='object'?rec.type:'normal';
+            const shift=typeof rec==='object'?rec.shift:'day';
+            const dotCls=shift==='night'?'bdot-purple':(t==='overtime'?'bdot-warning':(t==='leave'?'bdot-danger':'bdot-primary'));
+            dot=`<div class="bdot ${dotCls}"></div>`;
+        }
         html+=`<div class="${cls}" onclick="toggleBDay(${d})"><span class="bdn">${d}</span>${dot}</div>`;
     }
     document.getElementById('batch-grid').innerHTML=html;
@@ -1541,7 +1599,14 @@ function batchClearRecords(){
         S.batchSel.forEach(d=>{
             const key=dk(S.y,S.m,d);
             const rk=recKey(key);
-            if(S.records[rk]){delete S.records[rk];cnt++;}
+            if(S.records[rk]){
+                const prevRec=S.records[rk];
+                const prevH=getH(prevRec);
+                const prevType=typeof prevRec==='object'?prevRec.type:'normal';
+                delete S.records[rk];
+                addOpLog(key,'删除',`${prevH}h`,prevType);
+                cnt++;
+            }
         });
         S.batchSel=new Set();
         S.batchShift=null;
@@ -1571,7 +1636,10 @@ function saveBatch(){
     S.batchSel.forEach(d=>{
         const key=dk(S.y,S.m,d);
         const bExtra=parseFloat(document.getElementById('bh-extra').value)||0;
+        const prevRec=S.records[recKey(key)];
+        const prevH=prevRec?getH(prevRec):null;
         S.records[recKey(key)]={hours,rate:bRate,type:S.batchType,shift,note:S.batchNotes[d]||'',extra:bExtra};
+        addOpLog(key,prevRec?'修改':'新增',prevRec?`${prevH}h → ${hours}h`:`${hours}h`,S.batchType);
     });
     persist();
     const savedCnt=S.batchSel.size;
@@ -1594,7 +1662,7 @@ function closeSettings(){
 }
 function askClearAll(){
     showDialog('清空数据','将删除全部工时记录，此操作不可撤销，确认吗？','清空','dbtn-countdown',()=>{
-        S.records={};persist();render();closeSettings();toast('所有数据已清空');
+        S.records={};S.opLog=[];localStorage.removeItem('wh3_oplog');persist();render();closeSettings();toast('所有数据已清空');
     },'取消',5);
 }
 
@@ -1797,7 +1865,6 @@ function importSingleEntry(input, targetEntryId) {
                 renderEntryList();
             }
 
-            // 4. 数据写入（替换前缀，确保不覆盖旧日期）
             const oldPrefix = data.id ? data.id + '|' : '';
             const newPrefix = targetId + '|';
             let added = 0;
@@ -1812,7 +1879,6 @@ function importSingleEntry(input, targetEntryId) {
                 }
             }
 
-            // 5. 保存并刷新界面
             persist();
             persistEntries();
             render();
@@ -1868,7 +1934,7 @@ function fbCopyShare(txt){
 
 // 版本检查
 async function checkUpdate() {
-    toast('正在检查最新版本...');
+    toast('正在检查....');
     try {
         const response = await fetch('https://punchlogcn.pages.dev/version.json');
         const remote = await response.json();
@@ -1981,12 +2047,10 @@ function showNotesDays(){
         const d=k.split('|')[1].split('-')[2];
         return `${S.m+1}/${d}  ${r.note}`;
     }).join('\n');
-    showDialog('有备注的日期',lines,'关闭','dbtn-ok',()=>{},'');
+    showDialog('本月备注记录',lines,'关闭','dbtn-ok',()=>{},'');
 }
 
-// 更新日志
 function showUpdateHistory() {
-    // 改成 innerHTML 而不是纯文本
     document.getElementById('dlg-title').textContent = '更新日志';
     document.getElementById('dlg-msg').innerHTML = UPDATE_HISTORY;
     document.getElementById('dlg-btns').innerHTML = `
@@ -1994,7 +2058,6 @@ function showUpdateHistory() {
     `;
     document.getElementById('dialog').classList.add('show');
 }
-// ============================
 
 let _lastClickDay=null;
 let _lastClickTime=0;
