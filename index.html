@@ -1096,16 +1096,21 @@ function addOpLog(dateKey,action,detail,type){
     const time=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const parts=dateKey.split('-');
     const date=`${parts[1]}月${parts[2]}日`;
-    S.opLog.unshift({time,date,action,detail,type:OPLOG_TYPE_NAMES[type]||type||''});
+    S.opLog.unshift({time,date,action,detail,type:OPLOG_TYPE_NAMES[type]||type||'',
+    entry:S.activeEntry
+    });
     if(S.opLog.length>50) S.opLog.length=50;
     localStorage.setItem('wh3_oplog',JSON.stringify(S.opLog));
 }
-function showOpLog(){
-    if(!S.opLog||S.opLog.length===0){toast('暂无操作日志');return;}
-    const lines=S.opLog.map(e=>`${e.time}　${e.date}　${e.action} ${e.detail}${e.type?`（${e.type}）`:''}`).join('<br>');
-    showDialog('操作日志',lines,'关闭','dbtn-ok',()=>{},'');
+function showOpLog() {
+    if (!S.opLog || S.opLog.length === 0) { toast('暂无操作日志'); return; }
+    const filtered = S.opLog.filter(e => e.entry === S.activeEntry);
+    if (filtered.length === 0) { toast('当前条目暂无操作日志'); return; }
+    const lines = filtered.map(e =>
+        `${e.time}　${e.date}　${e.action} ${e.detail}${e.type ? `（${e.type}）` : ''}`
+    ).join('<br>');
+    showDialog('操作日志', lines, '关闭', 'dbtn-ok', () => {}, '');
 }
-
 function toast(msg){
     const el=document.getElementById('toast');
     el.textContent=msg;el.classList.add('show');
