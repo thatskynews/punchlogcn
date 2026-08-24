@@ -659,7 +659,7 @@
             </div>
             <div class="link-info">
                 <div class="link-name">检查版本更新</div>
-                <div class="link-desc">当前版本 <span id="local-version-text">1280.27(1847)</span></div>
+                <div class="link-desc">当前版本 <span id="local-version-text">1281.29(1849)</span></div>
             </div>
             <span class="link-arrow">›</span>
         </button>
@@ -975,12 +975,16 @@ let S={
 };
 
 // 版本检查配置
-const CURRENT_VER = '1280.27(1847)';
+const CURRENT_VER = '1281.29(1849)';
 const VERSION_FILE_URL = 'https://punchlogcn.pages.dev/version.txt';
 const APK_DOWNLOAD_URL = 'https://punchlogcn.pages.dev/PunchLog.apk';
 
 // 更新日志
 const UPDATE_HISTORY = `
+◆【1281.29 / 1849】2026/8/25<br>
+- 调整操作日志记录改为单条目记录而非整个项目<br>
+- 调整休息类型，当工时为0时，不再影响四大金刚区的日均工时<br>
+- 其它微调整<br><br>
 ◆【1280.27 / 1847】2026/8/20<br>
 - 设置新增引入「操作日志」，记录最近 50 条操作记录<br>
 - 批量编辑面板中的记录状态点调整为按类型覆色以便于区分<br>
@@ -1256,17 +1260,30 @@ function renderCal(dir=0){
 }
 
 function updateStats(){
-    let totalH=0,days=0,totalInc=0;
+    let totalH=0, days=0, totalInc=0;
     const pre=`${S.activeEntry}|${S.y}-${S.m+1}-`;
     for(const k in S.records){
         if(!k.startsWith(pre)) continue;
         const r=S.records[k];
-        const h=getH(r);totalH+=h;days++;
+        const h=getH(r);
+        totalH+=h;
+        days++;
         const rate=typeof r==='object'&&r.rate?r.rate:S.cfg.rate;
         const extra=typeof r==='object'&&r.extra?r.extra:0;
         totalInc+=(h*rate+extra);
     }
-    const avg=days>0?(totalH/days).toFixed(1):0;
+    
+    let avgDays = 0;
+    for(const k in S.records){
+        if(!k.startsWith(pre)) continue;
+        const r=S.records[k];
+        const h=getH(r);
+        const type=typeof r==='object'?r.type:'normal';
+        if(type==='leave' && h===0) continue;
+        avgDays++;
+    }
+    const avg = avgDays > 0 ? (totalH / avgDays).toFixed(1) : 0;
+    
     animNum(document.getElementById('s-hours'),`${totalH.toFixed(1)} <span class="u">h</span>`);
     animNum(document.getElementById('s-income'),`¥ ${totalInc.toFixed(0)}`);
     animNum(document.getElementById('s-days'),`${days} <span class="u">天</span>`);
