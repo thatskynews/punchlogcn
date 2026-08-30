@@ -641,7 +641,7 @@
                 </svg>
             </div>
             <div class="link-info">
-                <div class="link-name">请我喝咖啡</div>
+                <div class="link-name">请我们喝咖啡</div>
                 <div class="link-desc">为 PunchLog 点份 Coffee☕</div>
             </div>
             <span class="link-arrow">›</span>
@@ -691,6 +691,18 @@
             </div>
             <span class="link-arrow">›</span>
         </button>
+        <button class="link-item" onclick="openLink('https://skytime.pages.dev')">
+    <div class="link-icon" style="background:rgba(59,130,246,0.1);">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
+            <path fill="#3b82f6" d="M1 12q0-1.25.25-2.4T2 7.4q.175-.375.575-.488t.75.088t.475.6t-.05.8q-.35.825-.55 1.738T3 12t.2 1.863t.55 1.737q.175.4.05.8t-.475.6t-.75.088T2 16.6q-.5-1.05-.75-2.2T1 12m22 0q0 1.25-.25 2.4T22 16.6q-.175.375-.575.488t-.75-.088t-.475-.6t.05-.8q.35-.825.55-1.737T21 12t-.2-1.862t-.55-1.738q-.175-.4-.05-.8t.475-.6t.75-.088T22 7.4q.5 1.05.75 2.2T23 12M10.5 4h3zm0 16h3zm0 2q-.65 0-1.187-.387t-.738-1.038L8 18.65q-.15-.5-.462-1.012t-.813-1.063q-.85-.925-1.287-2.1T5 12q0-1.275.438-2.45t1.287-2.125q.5-.575.813-1.075t.462-1l.575-1.925q.2-.65.738-1.037T10.5 2h3q.65 0 1.188.388t.737 1.037L16 5.35q.15.5.463 1.013t.812 1.062q.85.925 1.288 2.1T19 12q0 1.275-.437 2.45t-1.288 2.125q-.5.575-.812 1.075t-.463 1l-.575 1.925q-.2.65-.737 1.038T13.5 22zm5.038-6.462Q17 14.075 17 12t-1.463-3.537T12 7T8.463 8.463T7 12t1.463 3.538T12 17t3.538-1.463M10.1 5.25q.5-.125.963-.2T12 4.975t.938.075t.962.2L13.5 4h-3zM10.5 20h3l.4-1.25q-.5.125-.962.188T12 19t-.937-.062t-.963-.188z"/>
+        </svg>
+    </div>
+    <div class="link-info">
+        <div class="link-name">SkyTime</div>
+        <div class="link-desc">PunchLog 旗下系列产品</div>
+    </div>
+    <span class="link-arrow">›</span>
+</button>
         <button class="link-item" onclick="openLink('mailto:lichengz499@gmail.com')">
             <div class="link-icon" style="background:rgba(16,185,129,0.1);">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1765,7 +1777,15 @@ function exportTxt(){
     const lines=[];
     const pre=`${S.activeEntry}|${S.y}-${S.m+1}-`;
     const ae=S.entries.find(e=>e.id===S.activeEntry)||{name:'默认'};
-    const recs=Object.entries(S.records).filter(([k])=>k.startsWith(pre)).sort(([a],[b])=>a.localeCompare(b));
+    const recs = Object.entries(S.records)
+    .filter(([k]) => k.startsWith(pre))
+    .sort(([a], [b]) => {
+        const da = a.split('|')[1].split('-');
+        const db = b.split('|')[1].split('-');
+        if (da[0] !== db[0]) return parseInt(da[0]) - parseInt(db[0]);
+        if (da[1] !== db[1]) return parseInt(da[1]) - parseInt(db[1]);
+        return parseInt(da[2]) - parseInt(db[2]);
+    });
     lines.push(`PunchLog — ${S.y}年${S.m+1}月 【${ae.name}】`);
     lines.push('='.repeat(30));
     let totalH=0,totalInc=0;
@@ -2060,25 +2080,22 @@ function importJson(input){
     reader.readAsText(file);
 }
 function showNotesDays(){
-    const pre=`${S.activeEntry}|${S.y}-${S.m+1}-`;
-    const noted=Object.entries(S.records)
-        .filter(([k,r])=>k.startsWith(pre)&&typeof r==='object'&&r.note)
-        .sort(([a],[b])=>a.localeCompare(b));
-    if(noted.length===0){toast('本月暂无备注记录');return;}
-    const lines=noted.map(([k,r])=>{
-        const d=k.split('|')[1].split('-')[2];
+    const pre = `${S.activeEntry}|${S.y}-${S.m+1}-`;
+    const noted = Object.entries(S.records)
+        .filter(([k, r]) => k.startsWith(pre) && typeof r === 'object' && r.note)
+        .sort(([a], [b]) => {
+            const da = a.split('|')[1].split('-');
+            const db = b.split('|')[1].split('-');
+            if (da[0] !== db[0]) return parseInt(da[0]) - parseInt(db[0]);
+            if (da[1] !== db[1]) return parseInt(da[1]) - parseInt(db[1]);
+            return parseInt(da[2]) - parseInt(db[2]);
+        });
+    if (noted.length === 0) { toast('本月暂无备注记录'); return; }
+    const lines = noted.map(([k, r]) => {
+        const d = k.split('|')[1].split('-')[2];
         return `${S.m+1}/${d}  ${r.note}`;
     }).join('\n');
-    showDialog('本月备注记录',lines,'关闭','dbtn-ok',()=>{},'');
-}
-
-function showUpdateHistory() {
-    document.getElementById('dlg-title').textContent = '更新日志';
-    document.getElementById('dlg-msg').innerHTML = UPDATE_HISTORY;
-    document.getElementById('dlg-btns').innerHTML = `
-        <button class="dbtn-ok" onclick="closeDialog()">关闭</button>
-    `;
-    document.getElementById('dialog').classList.add('show');
+    showDialog('本月备注记录', lines, '关闭', 'dbtn-ok', () => {}, '');
 }
 
 let _lastClickDay=null;
