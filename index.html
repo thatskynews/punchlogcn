@@ -659,7 +659,7 @@
             </div>
             <div class="link-info">
                 <div class="link-name">检查版本更新</div>
-                <div class="link-desc">当前版本 <span id="local-version-text">1281.29(1849)</span></div>
+                <div class="link-desc">当前版本 <span id="local-version-text">1282.07(1888)</span></div>
             </div>
             <span class="link-arrow">›</span>
         </button>
@@ -987,12 +987,17 @@ let S={
 };
 
 // 版本检查配置
-const CURRENT_VER = '1281.29(1849)';
+const CURRENT_VER = '1282.07(1888)';
 const VERSION_FILE_URL = 'https://punchlogcn.pages.dev/version.txt';
 const APK_DOWNLOAD_URL = 'https://punchlogcn.pages.dev/PunchLog.apk';
 
 // 更新日志
 const UPDATE_HISTORY = `
+◆【1282.07 / 1888】2026/8/30<br>
+- 新增关于页面引入「SkyTime」品牌系列产品入口<br>
+- 修复「导出数据」中日期排序错乱问题<br>
+- 修复「本月备注记录」中日期排序错乱问题<br>
+- 其它细节优化<br><br>
 ◆【1281.29 / 1849】2026/8/25<br>
 - 调整操作日志记录改为单条目记录而非整个项目<br>
 - 调整休息类型，当工时为0时，不再影响四大金刚区的日均工时<br>
@@ -1004,7 +1009,7 @@ const UPDATE_HISTORY = `
 - 底部统计卡片新增「今年累计收入」展示<br>
 - 其它优化与调整<br><br>
 ◆【1271.49 / 1678】2026/7/29<br>
-- 记录仪表标签请假调整为休息文本<br>
+- 记录仪表盘标签类型请假调整为休息文本<br>
 - 引入「检查版本更新」功能，以获取最新版本<br>
 - 菜单关于页面引入「更新日志」独立入口，可随时查看所有历史版本说明<br>
 - 底部统计卡片新增「本月连续打卡天数」展示，及时掌握工作节拍<br>
